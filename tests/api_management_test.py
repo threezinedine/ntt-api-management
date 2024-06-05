@@ -16,10 +16,10 @@ class APIManagementTest(unittest.TestCase):
 
     def setUp(self) -> None:
         self.__CleanDataFile()
+        NTTAPIDailyLimit.daily_limit = self.test_limit
 
         self.apiWith2APIs = NTTAPIManagement(
             data_json_file=self.test_data_file,
-            limit=self.test_limit,
         )
         self.apiWith2APIs.add_api(self.first_api)
         self.apiWith2APIs.add_api(self.second_api)
@@ -54,10 +54,10 @@ class APIManagementTest(unittest.TestCase):
         self.__APIShouldHasKey(api.API, self.first_api)
         self.__APIsShouldHaveKeys(api.APIs, [self.first_api])
 
-    def __APIShouldHasKey(self, api: NTTAPI, key: str) -> None:
+    def __APIShouldHasKey(self, api: INTTAPI, key: str) -> None:
         self.assertEqual(api.key, key)
 
-    def __APIsShouldHaveKeys(self, apis: List[NTTAPI], keys: List[str]) -> None:
+    def __APIsShouldHaveKeys(self, apis: List[INTTAPI], keys: List[str]) -> None:
         self.assertEqual(len(apis), len(keys))
         for i in range(len(apis)):
             self.__APIShouldHasKey(apis[i], keys[i])
@@ -103,7 +103,7 @@ class APIManagementTest(unittest.TestCase):
         self,
     ) -> None:
         limit = 10
-        api = NTTAPIManagement(limit=limit)
+        api = NTTAPIManagement()
         first_api = "first-api"
         second_api = "second-api"
         api.add_api(first_api)
@@ -131,8 +131,9 @@ class APIManagementTest(unittest.TestCase):
         for _ in range(make_requests):
             self.apiWith2APIs.make_request()
 
-        other_api = NTTAPIManagement(data_json_file=self.test_data_file, limit=10)
+        other_api = NTTAPIManagement(data_json_file=self.test_data_file)
 
+        self.assertEqual(len(other_api.APIs), len(self.apiWith2APIs.APIs))
         self.assertEqual(other_api.APIs[0].number_requests, first_api_requests)
         self.assertEqual(other_api.APIs[1].number_requests, second_api_requests)
         self.__ItShouldHasTheNumberOfRequestsAsExpected(
@@ -145,7 +146,7 @@ class APIManagementTest(unittest.TestCase):
 
     def __ItShouldHasTheNumberOfRequestsAsExpected(
         self,
-        apis: List[NTTAPI],
+        apis: List[INTTAPI],
         requests: List[int],
     ) -> None:
         for i in range(len(apis)):
@@ -170,7 +171,6 @@ class APIManagementTest(unittest.TestCase):
 
         other_api = NTTAPIManagement(
             data_json_file=self.test_data_file,
-            limit=self.test_limit,
         )
 
         other_api.make_request()
@@ -202,9 +202,9 @@ class APIManagementTest(unittest.TestCase):
         for _ in range(5):
             self.apiWith2APIs.make_request()
 
-        self.__FakeDateToYesterday()
+        self.__FakeDateToYesterday(self.apiWith2APIs)
 
-        other_api = NTTAPIManagement(data_json_file=self.test_data_file, limit=10)
+        other_api = NTTAPIManagement(data_json_file=self.test_data_file)
 
         self.__ItShouldHasTheNumberOfRequestsAsExpected(
             other_api.APIs,
@@ -214,20 +214,14 @@ class APIManagementTest(unittest.TestCase):
             ],
         )
 
-    def __FakeDateToYesterday(self) -> None:
-        yesterday = date.today() - timedelta(days=1)
+    def __FakeDateToYesterday(self, manager: NTTAPIManagement) -> None:
+        for api in manager.APIs:
+            api.last_access = date.today() - timedelta(days=1)
 
-        with open(self.test_data_file, "r") as file:
-            data = json.loads(file.read())
-
-        data[NTTAPIManagement.date_key] = str(yesterday)
-
-        with open(self.test_data_file, "w") as file:
-            file.write(json.dumps(data))
+        manager.UpdateDataFile()
 
     def test_GivenAPIInEachMinuteMode_WhenMakeRequest_ThenTheAPIIsChanged(self) -> None:
         api = NTTAPIManagement(
-            limit=10,
             api_mode=NTTAPIMode.MINUTE_LIMIT,
         )
 
