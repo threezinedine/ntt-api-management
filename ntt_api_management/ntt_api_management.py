@@ -3,8 +3,6 @@ import json
 import os
 from typing import Optional, List
 from .i_ntt_api import INTTAPI
-from .ntt_api_mode import NTTAPIMode
-from .ntt_api import *
 
 
 class NTTAPIManagement:
@@ -13,13 +11,13 @@ class NTTAPIManagement:
 
     def __init__(
         self,
+        api_model: INTTAPI,
         data_json_file: Optional[str] = None,
-        api_mode: NTTAPIMode = NTTAPIMode.DAILY_LIMIT,
     ) -> None:
         self.__apis: List[INTTAPI] = []
         self.__current_api_index: int = -1
         self.__data_json_file = data_json_file
-        self.__api_mode = api_mode
+        self.__api_model = api_model
 
         # check data_json_file exists
         if data_json_file is not None and os.path.exists(data_json_file):
@@ -36,10 +34,7 @@ class NTTAPIManagement:
             self.UpdateDataFile()
             return
 
-        if self.__api_mode == NTTAPIMode.DAILY_LIMIT:
-            self.__apis = [NTTAPIDailyLimit.FromDict(data) for data in data_dicts]
-        else:
-            self.__apis = [NTTAPIMinuteLimit.FromDict(data) for data in data_dicts]
+        self.__apis = [self.__api_model().FromDict(data) for data in data_dicts]
 
         self.__CheckResetAPIs()
         self.__UpdateAPIIndex()
@@ -73,11 +68,8 @@ class NTTAPIManagement:
     def APIs(self) -> List[INTTAPI]:
         return self.__apis
 
-    def add_api(self, api_key: str) -> None:
-        if self.__api_mode == NTTAPIMode.DAILY_LIMIT:
-            self.__apis.append(NTTAPIDailyLimit(key=api_key))
-        else:
-            self.__apis.append(NTTAPIMinuteLimit(key=api_key))
+    def add_api(self, api_key: str, **kwargs) -> None:
+        self.__apis.append(self.__api_model(key=api_key, **kwargs))
 
         self.UpdateDataFile()
         self.__UpdateAPIIndex()

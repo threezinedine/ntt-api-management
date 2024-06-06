@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 
 class INTTAPI(ABC):
@@ -6,9 +7,8 @@ class INTTAPI(ABC):
     def ToDict(self) -> dict[str, object]:
         pass
 
-    @staticmethod
     @abstractmethod
-    def FromDict(data: dict[str, object]) -> "INTTAPI":
+    def FromDict(self, data: dict[str, object]) -> "INTTAPI":
         pass
 
     @abstractmethod
@@ -30,4 +30,14 @@ class INTTAPI(ABC):
     @property
     @abstractmethod
     def key(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def last_request_time(self) -> datetime:
+        pass
+
+    @last_request_time.setter
+    @abstractmethod
+    def last_request_time(self, value: datetime) -> None:
         pass
